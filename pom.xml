@@ -19,6 +19,7 @@
         <module>jdbaudit</module>
         <module>jdbaudit-scan-password</module>
         <module>jdbaudit-scan-vulnerability</module>
+        <module>jdbaudit-db-oracle</module>
     </modules>
 
     <properties>
@@ -33,6 +34,11 @@
         <dependencies>
             <dependency>
                 <groupId>com.jthinking.jdbaudit</groupId>
+                <artifactId>jdbaudit</artifactId>
+                <version>${jdbaudit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jthinking.jdbaudit</groupId>
                 <artifactId>jdbaudit-core</artifactId>
                 <version>${jdbaudit.version}</version>
             </dependency>
@@ -44,6 +50,11 @@
             <dependency>
                 <groupId>com.jthinking.jdbaudit</groupId>
                 <artifactId>jdbaudit-db-mysql</artifactId>
+                <version>${jdbaudit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jthinking.jdbaudit</groupId>
+                <artifactId>jdbaudit-db-oracle</artifactId>
                 <version>${jdbaudit.version}</version>
             </dependency>
             <dependency>
