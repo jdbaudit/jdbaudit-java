@@ -52,7 +52,6 @@ public class Rule {
 
     private Map<Lang, String> remediation;
 
-
     private List<RuleReference> references;
 
     private RiskType riskType;
