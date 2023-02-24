@@ -83,7 +83,10 @@ public class RiskScanner {
         }
         try {
             JsonNode jsonNode = objectMapper.readTree(jsonRule);
-            this.ruleVersion = jsonNode.get("version").asText();
+            JsonNode version = jsonNode.get("version");
+            if (version != null) {
+                this.ruleVersion = version.asText();
+            }
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -95,10 +98,6 @@ public class RiskScanner {
      * @return 任务ID
      */
     public String submitTask(ScanTask scanTask) {
-        if (this.ruleVersion == null) {
-            throw new RuntimeException("rule set is empty, please call loadRule method first");
-        }
-        // 提交任务
         for (DBScanner scanner : dbScanners) {
             RiskType riskType = scanTask.getRiskType();
             if (riskType.equals(RiskType.valueOf(scanner.getId()))) {
