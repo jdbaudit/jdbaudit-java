@@ -3,7 +3,6 @@ package com.jthinking.jdbaudit.scan.api.entity;
 import com.jthinking.jdbaudit.core.entity.RiskType;
 import com.jthinking.jdbaudit.core.entity.RuleSource;
 import com.jthinking.jdbaudit.db.api.DBSettings;
-import com.jthinking.jdbaudit.db.api.entity.DBVersion;
 import com.jthinking.jdbaudit.scan.api.ScanTaskHandler;
 
 import java.util.List;
@@ -96,8 +95,4 @@ public class ScanTask {
         return taskControl;
     }
 
-    public String getVersionString() {
-        DBVersion version = dbSettings.getVersion();
-        return version.getVersion();
-    }
 }
