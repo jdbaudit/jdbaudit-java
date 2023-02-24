@@ -45,9 +45,6 @@ public class MySQLSettings extends AbstractDBSettings {
     private final String password;
 
 
-    private Connection connection;
-
-
     public MySQLSettings(String host, Integer port, String username, String password) {
         this.host = host;
         this.port = port;
@@ -62,16 +59,17 @@ public class MySQLSettings extends AbstractDBSettings {
 
     @Override
     public DBVersion getVersion() {
-        openConnection();
         String innodbVersion = null;
-        try (Statement st = connection.createStatement()) {
-            try (ResultSet rs = st.executeQuery("show variables like 'innodb_version'")) {
-                while (rs.next()) {
-                    String key = rs.getString(1);
-                    innodbVersion = rs.getString(2);
+        try (Connection conn = openConnection()) {
+            try (Statement st = conn.createStatement()) {
+                try (ResultSet rs = st.executeQuery("show variables like 'innodb_version'")) {
+                    while (rs.next()) {
+                        String key = rs.getString(1);
+                        innodbVersion = rs.getString(2);
+                    }
+                } catch (Exception e) {
+                    // 数据库版本不同可能导致特定语句执行失败
                 }
-            } catch (Exception e) {
-                // 数据库版本不同可能导致特定语句执行失败
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -100,53 +98,54 @@ public class MySQLSettings extends AbstractDBSettings {
     
     @Override
     public List<DBPassword> getPassword() {
-        openConnection();
         List<DBPassword> passwords = new ArrayList<>();
-        try (Statement st = connection.createStatement()) {
-            // 5.6
-            try (ResultSet rs = st.executeQuery("select `Host`, `User`, `Password` from mysql.user where plugin = 'mysql_native_password'")) {
-                while (rs.next()) {
-                    String host = rs.getString(1);
-                    String user = rs.getString(2).toLowerCase();
-                    String pass = rs.getString(3);
-                    if (pass.trim().equals("")) {
-                        continue;
+        try (Connection conn = openConnection()) {
+            try (Statement st = conn.createStatement()) {
+                // 5.6
+                try (ResultSet rs = st.executeQuery("select `Host`, `User`, `Password` from mysql.user where plugin = 'mysql_native_password'")) {
+                    while (rs.next()) {
+                        String host = rs.getString(1);
+                        String user = rs.getString(2).toLowerCase();
+                        String pass = rs.getString(3);
+                        if (pass.trim().equals("")) {
+                            continue;
+                        }
+                        String key = user + "@" + host;
+                        passwords.add(new DBPassword(key, user, pass));
                     }
-                    String key = user + "@" + host;
-                    passwords.add(new DBPassword(key, user, pass));
+                } catch (Exception e) {
+                    // 数据库版本不同可能导致特定语句执行失败
                 }
-            } catch (Exception e) {
-                // 数据库版本不同可能导致特定语句执行失败
-            }
-            // 5.7
-            try (ResultSet rs = st.executeQuery("select `Host`, `User`, `authentication_string` from mysql.user where plugin = 'mysql_native_password'")) {
-                while (rs.next()) {
-                    String host = rs.getString(1);
-                    String user = rs.getString(2).toLowerCase();
-                    String pass = rs.getString(3);
-                    if (pass.trim().equals("")) {
-                        continue;
+                // 5.7
+                try (ResultSet rs = st.executeQuery("select `Host`, `User`, `authentication_string` from mysql.user where plugin = 'mysql_native_password'")) {
+                    while (rs.next()) {
+                        String host = rs.getString(1);
+                        String user = rs.getString(2).toLowerCase();
+                        String pass = rs.getString(3);
+                        if (pass.trim().equals("")) {
+                            continue;
+                        }
+                        String key = user + "@" + host;
+                        passwords.add(new DBPassword(key, user, pass));
                     }
-                    String key = user + "@" + host;
-                    passwords.add(new DBPassword(key, user, pass));
+                } catch (Exception e) {
+                    // 数据库版本不同可能导致特定语句执行失败
                 }
-            } catch (Exception e) {
-                // 数据库版本不同可能导致特定语句执行失败
-            }
-            // 8.0
-            try (ResultSet rs = st.executeQuery("SELECT host, user, CONCAT('$mysql',LEFT(authentication_string,6),'*',INSERT(HEX(SUBSTR(authentication_string,8)),41,0,'*')) AS hash FROM mysql.user WHERE plugin = 'caching_sha2_password' AND authentication_string NOT LIKE '%INVALIDSALTANDPASSWORD%'")) {
-                while (rs.next()) {
-                    String host = rs.getString(1);
-                    String user = rs.getString(2).toLowerCase();
-                    String pass = rs.getString(3);
-                    if (pass.trim().equals("")) {
-                        continue;
+                // 8.0
+                try (ResultSet rs = st.executeQuery("SELECT host, user, CONCAT('$mysql',LEFT(authentication_string,6),'*',INSERT(HEX(SUBSTR(authentication_string,8)),41,0,'*')) AS hash FROM mysql.user WHERE plugin = 'caching_sha2_password' AND authentication_string NOT LIKE '%INVALIDSALTANDPASSWORD%'")) {
+                    while (rs.next()) {
+                        String host = rs.getString(1);
+                        String user = rs.getString(2).toLowerCase();
+                        String pass = rs.getString(3);
+                        if (pass.trim().equals("")) {
+                            continue;
+                        }
+                        String key = user + "@" + host;
+                        passwords.add(new DBPassword(key, user, pass));
                     }
-                    String key = user + "@" + host;
-                    passwords.add(new DBPassword(key, user, pass));
+                } catch (Exception e) {
+                    // 数据库版本不同可能导致特定语句执行失败
                 }
-            } catch (Exception e) {
-                // 数据库版本不同可能导致特定语句执行失败
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -154,92 +153,48 @@ public class MySQLSettings extends AbstractDBSettings {
         return passwords;
     }
 
-    @Override
-    public QueryListResult query(List<String> queries) {
-        openConnection();
-        Map<String, QueryResult> rowDataMap = new HashMap<>();
-        try (Statement st = connection.createStatement()) {
-            for (String query : queries) {
-                QueryResult queryResult = new QueryResult();
-                try (ResultSet rs = st.executeQuery(query)) {
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
 
-                    Map<String, Integer> label = new HashMap<>();
-                    for (int i = 0; i < columnCount; i++) {
-                        String columnLabel = metaData.getColumnLabel(i + 1);
-                        label.put(columnLabel, i);
-                    }
-
-                    queryResult.setQuery(query);
-                    queryResult.setLabel(label);
-
-                    List<String[]> rowDataList = new ArrayList<>();
-                    while (rs.next()) {
-                        String[] data = new String[columnCount];
-                        for (int i = 0; i < columnCount; i++) {
-                            data[i] = rs.getString(i + 1);
-                        }
-                        rowDataList.add(data);
-                    }
-                    queryResult.setData(rowDataList);
-                } catch (Exception e) {
-                    queryResult.setError(e.getMessage());
-                }
-                rowDataMap.put(query, queryResult);
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        return new QueryListResult(rowDataMap);
-    }
-
-    @Override
-    public QueryResult query(String sql) {
-        return null;
-    }
 
     @Override
     public QueryListResult getDataSample() {
-        openConnection();
         Map<String, QueryResult> dbDataSampleMap = new HashMap<>();
-        try (Statement st = connection.createStatement()) {
-            Set<String> tables = new HashSet<>();
-            try (ResultSet rs = st.executeQuery(
-                    "select TABLE_SCHEMA, TABLE_NAME from information_schema.tables where TABLE_SCHEMA not in ('information_schema', 'mysql', 'performance_schema', 'sys')")) {
-                while (rs.next()) {
-                    String tableSchema = rs.getString(1);
-                    String tableName = rs.getString(2);
-                    tables.add(tableSchema + "." + tableName);
+        try (Connection conn = openConnection()) {
+            try (Statement st = conn.createStatement()) {
+                Set<String> tables = new HashSet<>();
+                try (ResultSet rs = st.executeQuery(
+                        "select TABLE_SCHEMA, TABLE_NAME from information_schema.tables where TABLE_SCHEMA not in ('information_schema', 'mysql', 'performance_schema', 'sys')")) {
+                    while (rs.next()) {
+                        String tableSchema = rs.getString(1);
+                        String tableName = rs.getString(2);
+                        tables.add(tableSchema + "." + tableName);
+                    }
+                } catch (Exception e) {
+                    // 数据库版本不同可能导致特定语句执行失败
                 }
-            } catch (Exception e) {
-                // 数据库版本不同可能导致特定语句执行失败
-            }
-            for (String table : tables) {
-                String query = "SELECT * FROM " + table + " limit 1";
-                try (ResultSet rs = st.executeQuery(query)) {
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
-                    Map<String, Integer> label = new HashMap<>();
-                    for (int i = 0; i < columnCount; i++) {
-                        String columnLabel = metaData.getColumnLabel(i + 1);
-                        label.put(columnLabel, i);
-                    }
-                    QueryResult queryResult = new QueryResult();
-                    queryResult.setQuery(query);
-                    queryResult.setLabel(label);
-                    List<String[]> rowDataList = new ArrayList<>();
-                    if (rs.next()) {
-                        String[] data = new String[columnCount];
+                for (String table : tables) {
+                    String query = "SELECT * FROM " + table + " limit 1";
+                    try (ResultSet rs = st.executeQuery(query)) {
+                        ResultSetMetaData metaData = rs.getMetaData();
+                        int columnCount = metaData.getColumnCount();
+                        Map<String, Integer> label = new HashMap<>();
                         for (int i = 0; i < columnCount; i++) {
-                            data[i] = rs.getString(i + 1);
+                            String columnLabel = metaData.getColumnLabel(i + 1);
+                            label.put(columnLabel, i);
                         }
-                        rowDataList.add(data);
+                        QueryResult queryResult = new QueryResult();
+                        queryResult.setQuery(query);
+                        queryResult.setLabel(label);
+                        List<String[]> rowDataList = new ArrayList<>();
+                        if (rs.next()) {
+                            String[] data = new String[columnCount];
+                            for (int i = 0; i < columnCount; i++) {
+                                data[i] = rs.getString(i + 1);
+                            }
+                            rowDataList.add(data);
+                        }
+                        queryResult.setData(rowDataList);
+                        dbDataSampleMap.put(query, queryResult);
                     }
-                    queryResult.setData(rowDataList);
-                    dbDataSampleMap.put(query, queryResult);
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
                 }
             }
         } catch (SQLException e) {
@@ -264,40 +219,15 @@ public class MySQLSettings extends AbstractDBSettings {
     }
 
     @Override
-    public boolean testConnection() {
-        registerDriver();
-        try (Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://" + host + ":" + port + "/mysql?connectTimeout=5000&socketTimeout=5000", username, password)) {
-            return conn != null;
-        } catch (Exception e) {
-            if (e.getMessage().contains("Communications link failure")) {
-                throw new ConnectionFailedException(new RuntimeException("数据库连接失败"));
-            }
-            if (e.getMessage().contains("Access denied")) {
-                throw new AuthenticationFailedException(new RuntimeException("数据库用户名或密码错误"));
-            }
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
-    public void openConnection() {
+    public Connection openConnection() {
         try {
-            if (this.connection != null && !this.connection.isClosed()) {
-                return;
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-        registerDriver();
-        try (Connection conn = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/mysql?connectTimeout=5000&socketTimeout=5000", username, password)) {
-            this.connection = conn;
+            return DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/mysql?connectTimeout=5000&socketTimeout=5000", username, password);
         } catch (Exception e) {
             if (e.getMessage().contains("Communications link failure")) {
-                throw new ConnectionFailedException(new RuntimeException("数据库连接失败"));
+                throw new ConnectionFailedException("数据库连接失败");
             }
             if (e.getMessage().contains("Access denied")) {
-                throw new AuthenticationFailedException(new RuntimeException("数据库用户名或密码错误"));
+                throw new AuthenticationFailedException("数据库用户名或密码错误");
             }
             throw new RuntimeException(e);
         }
@@ -309,7 +239,7 @@ public class MySQLSettings extends AbstractDBSettings {
             try {
                 DriverManager.registerDriver(new Driver());
             } catch (Exception e) {
-                throw new RegisterDriverFailedException(e);
+                throw new RegisterDriverFailedException("数据库驱动注册失败");
             }
         }
     }
@@ -355,10 +285,6 @@ public class MySQLSettings extends AbstractDBSettings {
      */
     public boolean comparePasswordWithSha256PasswordPlugin(String plaintext, String originalCiphertext) {
         return comparePasswordWithCachingSha2PasswordPlugin(plaintext, originalCiphertext);
-    }
-
-    public static DBSettings options(String host, Integer port, String username, String password) {
-        return new MySQLSettings(host, port, username, password);
     }
 
     @Override
