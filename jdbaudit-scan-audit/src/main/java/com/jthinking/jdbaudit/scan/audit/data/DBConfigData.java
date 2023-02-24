@@ -14,7 +14,7 @@ public class DBConfigData extends QueryListResult implements DBData {
 
     @Override
     public String toDataString() {
-        return null;
+        return "";
     }
 
 }
