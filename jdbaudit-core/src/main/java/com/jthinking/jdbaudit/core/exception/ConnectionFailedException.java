@@ -21,7 +21,7 @@ package com.jthinking.jdbaudit.core.exception;
  * 扫描任务提交错误-网络连接失败
  */
 public class ConnectionFailedException extends RuntimeException {
-    public ConnectionFailedException(Throwable cause) {
-        super(cause);
+    public ConnectionFailedException(String message) {
+        super(message);
     }
 }

@@ -21,7 +21,7 @@ package com.jthinking.jdbaudit.core.exception;
  * 扫描任务提交错误-数据库驱动注册失败
  */
 public class RegisterDriverFailedException extends RuntimeException {
-    public RegisterDriverFailedException(Throwable cause) {
-        super(cause);
+    public RegisterDriverFailedException(String message) {
+        super(message);
     }
 }

@@ -22,8 +22,8 @@ package com.jthinking.jdbaudit.core.exception;
  */
 public class AuthenticationFailedException extends RuntimeException {
 
-    public AuthenticationFailedException(Throwable cause) {
-        super(cause);
+    public AuthenticationFailedException(String message) {
+        super(message);
     }
 
 }
