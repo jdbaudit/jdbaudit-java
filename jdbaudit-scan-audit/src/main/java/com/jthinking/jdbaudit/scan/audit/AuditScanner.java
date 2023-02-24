@@ -115,6 +115,11 @@ public class AuditScanner extends AbstractDBScanner<AuditRule, DBConfigData> {
     }
 
     @Override
+    protected Class<AuditRule> getRuleType() {
+        return AuditRule.class;
+    }
+
+    @Override
     public String getId() {
         return "AUDIT";
     }
