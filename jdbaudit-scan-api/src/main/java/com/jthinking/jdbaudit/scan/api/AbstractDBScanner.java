@@ -1,9 +1,13 @@
 package com.jthinking.jdbaudit.scan.api;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jthinking.jdbaudit.db.api.DBSettings;
+import com.jthinking.jdbaudit.db.api.entity.DBVersion;
 import com.jthinking.jdbaudit.engine.interpreter.util.RuleUtils;
 import com.jthinking.jdbaudit.scan.api.entity.*;
 
@@ -78,7 +82,7 @@ public abstract class AbstractDBScanner<R extends Rule, D extends DBData> implem
         this.scanTasks = new ConcurrentHashMap<>();
         this.rules = new ConcurrentHashMap<>();
         this.taskConfig = new TaskConfig();
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = new ObjectMapper().configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true).configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true);
         LinkedBlockingDeque<Runnable> workQueue = new LinkedBlockingDeque<>(10);
         this.scanTaskExecutor = new ThreadPoolExecutor(0, this.taskConfig.getMaxRunningTask(), 5, TimeUnit.SECONDS, workQueue, new ThreadPoolExecutor.AbortPolicy());
         this.startTaskTimeoutSchedule();
@@ -125,6 +129,8 @@ public abstract class AbstractDBScanner<R extends Rule, D extends DBData> implem
      * @return 当前任务所需的规则列表
      */
     private List<R> filterRules(Collection<R> rules, ScanTask scanTask) {
+        String dbId = scanTask.getDbSettings().getDBId();
+        DBVersion dbVersion = scanTask.getDbSettings().getVersion();
         return rules.parallelStream()
                 .filter(rule -> {
                     if (scanTask.getRuleSources() != null) {
@@ -133,8 +139,8 @@ public abstract class AbstractDBScanner<R extends Rule, D extends DBData> implem
                         return true;
                     }
                 })
-                .filter(rule -> rule.getDbId().equals(scanTask.getDbSettings().getDBId()))
-                .filter(rule -> RuleUtils.wildCardMatch(rule.getDbVersion(), scanTask.getVersionString()))
+                .filter(rule -> RuleUtils.wildCardMatch(rule.getDbId(), dbId))
+                .filter(rule -> RuleUtils.wildCardMatch(rule.getDbVersion(), dbVersion.getVersion()))
                 .collect(Collectors.toList());
     }
 
@@ -149,18 +155,17 @@ public abstract class AbstractDBScanner<R extends Rule, D extends DBData> implem
         final List<R> filterRules = filterRules(this.rules.values(), scanTask);
         // 连接数据库准备数据，每个任务查询一次。
         final List<D> preparedDataList = prepareData(scanTask.getDbSettings(), filterRules);
-        for (D preparedData : preparedDataList) {
-            // 逐条匹配规则
-            for (R rule : filterRules) {
-                scanTaskExecutor.submit(() -> {
-                    // match是最小执行单位，每个match可创建一个线程
-                    if (scanTask.getTimeout() == null) {
-                        scanTask.setTimeout(taskConfig.getTaskTimeout());
-                    }
-                    scanTask.setStartTime(System.currentTimeMillis());
-                    scanTasks.put(scanTask.getTaskId(), scanTask);
-                    ScanTaskHandler handler = scanTask.getHandler();
-                    handler.onStart(scanTask);
+        if (scanTask.getTimeout() == null) {
+            scanTask.setTimeout(taskConfig.getTaskTimeout());
+        }
+        scanTaskExecutor.submit(() -> {
+            scanTask.setStartTime(System.currentTimeMillis());
+            scanTasks.put(scanTask.getTaskId(), scanTask);
+            ScanTaskHandler handler = scanTask.getHandler();
+            handler.onStart(scanTask);
+            for (D preparedData : preparedDataList) {
+                // 逐条匹配规则
+                for (R rule : filterRules) {
                     try {
                         boolean matched = match(rule, preparedData, scanTask);
                         if (matched) {
@@ -177,13 +182,14 @@ public abstract class AbstractDBScanner<R extends Rule, D extends DBData> implem
                         }
                     } catch (Throwable t) {
                         handler.onError(scanTask, t);
-                    } finally {
-                        scanTasks.remove(scanTask.getTaskId());
-                        handler.onFinish(scanTask);
                     }
-                });
+                }
             }
-        }
+            scanTasks.remove(scanTask.getTaskId());
+            handler.onFinish(scanTask);
+        });
+
+
     }
 
     @Override
@@ -193,12 +199,19 @@ public abstract class AbstractDBScanner<R extends Rule, D extends DBData> implem
         }
         try {
             JsonNode ruleSet = objectMapper.readTree(jsonRule);
-            String ruleValue = ruleSet.get(this.getId()).toString();
-            List<R> ruleList = objectMapper.readValue(ruleValue, new TypeReference<List<R>>() {});
-            ruleList.parallelStream().forEach(rule -> this.rules.put(rule.getId(), rule));
+            if (ruleSet.has(this.getId())) {
+                String ruleValue = ruleSet.get(this.getId()).toString();
+                JavaType type = objectMapper.getTypeFactory().constructParametricType(List.class, getRuleType());
+                List<R> ruleList = objectMapper.readValue(ruleValue, type);
+                ruleList.parallelStream().forEach(rule -> this.rules.put(rule.getId(), rule));
+            }/* else {
+                throw new RuntimeException(this.getId() + " not found in rule json");
+            }*/
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
+    protected abstract Class<R> getRuleType();
 
 }
