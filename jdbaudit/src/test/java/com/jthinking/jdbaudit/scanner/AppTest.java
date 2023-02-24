@@ -2,6 +2,7 @@ package com.jthinking.jdbaudit.scanner;
 
 import com.jthinking.jdbaudit.core.entity.RiskType;
 import com.jthinking.jdbaudit.core.entity.RuleSource;
+import com.jthinking.jdbaudit.core.entity.Severity;
 import com.jthinking.jdbaudit.db.api.DBSettings;
 import com.jthinking.jdbaudit.db.mysql.MySQLSettings;
 import com.jthinking.jdbaudit.scan.api.*;
@@ -42,12 +43,12 @@ public class AppTest {
 
         List<DBSettings> dbSettingsList = new ArrayList<>();
         // 参数
-        dbSettingsList.add(MySQLSettings.options("localhost", 3306, "root", "root"));
+        dbSettingsList.add(new MySQLSettings("localhost", 3306, "root", "root"));
 
         // 创建扫描器实例
         RiskScanner riskXScanner = new RiskScanner();
 
-        try (FileInputStream inputStream = new FileInputStream("audit-rule.json")) {
+        try (FileInputStream inputStream = new FileInputStream("jdbaudit-rules/AUDIT.json")) {
             String jsonRule = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
             riskXScanner.loadRule(jsonRule, false);
         }
@@ -95,9 +96,14 @@ public class AppTest {
 
         RiskScanner riskScanner = new RiskScanner();
 
-        DBSettings dbSettings = MySQLSettings.options("localhost", 3306, "root", "root");
+        try (FileInputStream inputStream = new FileInputStream("jdbaudit-rules/AUDIT.json")) {
+            String jsonRule = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+            riskScanner.loadRule(jsonRule, false);
+        }
 
-        riskScanner.submitTask(ScanTask.of(dbSettings, RiskType.WEAK_PASSWORD, new ScanTaskHandler() {
+        DBSettings dbSettings = new MySQLSettings("localhost", 3306, "root", "root");
+
+        riskScanner.submitTask(ScanTask.of(dbSettings, RiskType.AUDIT, new ScanTaskHandler() {
 
             @Override
             public void onStart(ScanTask scanTask) {
@@ -110,7 +116,10 @@ public class AppTest {
                 Rule rule = alert.getRule();
                 String data = alert.getData();
                 String taskId = scanTask.getTaskId();
-                System.out.println("onAlert:" + scanTask.getTaskId());
+                Double baseScore = rule.getBaseScore();
+                String vectorString = rule.getVectorString();
+                Severity severity = rule.getSeverity();
+                System.out.println("onAlert:" + scanTask.getTaskId() + ":" + rule.getName() + ":" + data);
             }
 
             @Override
