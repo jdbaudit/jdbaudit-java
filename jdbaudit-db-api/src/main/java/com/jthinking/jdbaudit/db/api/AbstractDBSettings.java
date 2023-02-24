@@ -18,8 +18,14 @@
 package com.jthinking.jdbaudit.db.api;
 
 
-import java.sql.Connection;
-import java.sql.SQLException;
+import com.jthinking.jdbaudit.db.api.entity.QueryListResult;
+import com.jthinking.jdbaudit.db.api.entity.QueryResult;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Database information acquisition interface
@@ -27,33 +33,97 @@ import java.sql.SQLException;
  */
 public abstract class AbstractDBSettings implements DBSettings {
 
-    private Connection connection;
-
-
-    protected Connection getConnection() {
-        return this.connection;
+    public AbstractDBSettings() {
+        registerDriver();
     }
 
-    /**
-     * 打开数据库连接
-     */
-    protected abstract void openConnection();
+    protected abstract Connection openConnection();
 
-    /**
-     * 关闭数据库连接。
-     * 同一对象可反复关闭、打开。何时关闭是问题。建议增加超时无查询自动关闭。
-     */
-    protected void closeConnection() {
-        try {
-            if (this.connection != null && !this.connection.isClosed()) {
-                this.connection.close();
-                this.connection = null;
+    protected abstract void registerDriver();
+
+    @Override
+    public QueryResult query(String sql) {
+        try (Connection conn = openConnection()) {
+            try (Statement st = conn.createStatement()) {
+                QueryResult queryResult = new QueryResult();
+                try (ResultSet rs = st.executeQuery(sql)) {
+                    ResultSetMetaData metaData = rs.getMetaData();
+                    int columnCount = metaData.getColumnCount();
+                    Map<String, Integer> label = new HashMap<>();
+                    for (int i = 0; i < columnCount; i++) {
+                        String columnLabel = metaData.getColumnLabel(i + 1);
+                        label.put(columnLabel, i);
+                    }
+                    queryResult.setQuery(sql);
+                    queryResult.setLabel(label);
+                    List<String[]> rowDataList = new ArrayList<>();
+                    while (rs.next()) {
+                        String[] data = new String[columnCount];
+                        for (int i = 0; i < columnCount; i++) {
+                            data[i] = rs.getString(i + 1);
+                        }
+                        rowDataList.add(data);
+                    }
+                    queryResult.setData(rowDataList);
+                } catch (Exception e) {
+                    queryResult.setError(e.getMessage());
+                }
+                return queryResult;
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    protected abstract void registerDriver();
+    @Override
+    public QueryListResult query(List<String> queries) {
+        Map<String, QueryResult> rowDataMap = new HashMap<>();
+        try (Connection conn = openConnection()) {
+            try (Statement st = conn.createStatement()) {
+                for (String query : queries) {
+                    QueryResult queryResult = new QueryResult();
+                    try (ResultSet rs = st.executeQuery(query)) {
+                        ResultSetMetaData metaData = rs.getMetaData();
+                        int columnCount = metaData.getColumnCount();
+
+                        Map<String, Integer> label = new HashMap<>();
+                        for (int i = 0; i < columnCount; i++) {
+                            String columnLabel = metaData.getColumnLabel(i + 1);
+                            label.put(columnLabel, i);
+                        }
+
+                        queryResult.setQuery(query);
+                        queryResult.setLabel(label);
+
+                        List<String[]> rowDataList = new ArrayList<>();
+                        while (rs.next()) {
+                            String[] data = new String[columnCount];
+                            for (int i = 0; i < columnCount; i++) {
+                                data[i] = rs.getString(i + 1);
+                            }
+                            rowDataList.add(data);
+                        }
+                        queryResult.setData(rowDataList);
+                    } catch (Exception e) {
+                        queryResult.setError(e.getMessage());
+                    }
+                    rowDataMap.put(query, queryResult);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return new QueryListResult(rowDataMap);
+    }
+
+    @Override
+    public boolean testConnection() {
+        try (Connection conn = openConnection()) {
+            return conn != null;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 }
