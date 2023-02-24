@@ -25,9 +25,17 @@ implementation 'com.jthinking.jdbaudit:jdbaudit:0.1.0'
 ```
 RiskScanner riskScanner = new RiskScanner();
 
-DBSettings dbSettings = MySQLSettings.options("localhost", 3306, "root", "root");
+// load rules
+try (FileInputStream inputStream = new FileInputStream("jdbaudit-rules/AUDIT.json")) {
+    String jsonRule = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+    riskScanner.loadRule(jsonRule, false);
+}
 
-riskScanner.submitTask(ScanTask.of(dbSettings, RiskType.WEAK_PASSWORD, new ScanTaskHandler() {
+// create DBSettings
+DBSettings dbSettings = new MySQLSettings("localhost", 3306, "root", "root");
+
+// submit task
+riskScanner.submitTask(ScanTask.of(dbSettings, RiskType.AUDIT, new ScanTaskHandler() {
 
     @Override
     public void onStart(ScanTask scanTask) {
@@ -54,9 +62,9 @@ riskScanner.submitTask(ScanTask.of(dbSettings, RiskType.WEAK_PASSWORD, new ScanT
     }
 }));
 
-// 等待异步任务结束
+// waiting for async task finish
 Thread.sleep(1000 * 60);
 
-// 关闭扫描器
+// stop scanner
 riskScanner.stop();
 ```
