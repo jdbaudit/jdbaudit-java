@@ -7,6 +7,7 @@ import com.jthinking.jdbaudit.scan.api.entity.ScanTask;
 import com.jthinking.jdbaudit.scan.api.entity.TaskControl;
 import com.jthinking.jdbaudit.scan.password.data.DBPasswordData;
 import com.jthinking.jdbaudit.scan.password.rule.WeakPasswordRule;
+import com.jthinking.jdbaudit.scan.password.rule.WeakPasswordRuleMatcher;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -31,9 +32,10 @@ public class WeakPasswordScanner extends AbstractDBScanner<WeakPasswordRule, DBP
         if (taskControl.isStop()) {
             return false;
         }
-        String mode = weekPassRule.getMode();
+        WeakPasswordRuleMatcher matcher = weekPassRule.getMatcher();
+        String mode = matcher.getMode();
         if (mode.equals("text")) {
-            String password = weekPassRule.getValue();
+            String password = matcher.getValue();
             if (dbSettings.comparePassword(new PasswordParam(password, dbPassword.getPassword(), dbPassword.getUsername()))) {
                 // 返回实际密码
                 dbPassword.setPassword(password);
@@ -44,7 +46,7 @@ public class WeakPasswordScanner extends AbstractDBScanner<WeakPasswordRule, DBP
                 return true;
             }
         } else if (mode.equals("pattern")) {
-            String content = weekPassRule.getValue();
+            String content = matcher.getValue();
             Matcher userMatcher = USER_PATTERN.matcher(content);
             while (userMatcher.find()) {
                 String replacement = dbPassword.getUsername();
@@ -110,6 +112,11 @@ public class WeakPasswordScanner extends AbstractDBScanner<WeakPasswordRule, DBP
         return dbSettings.getPassword().parallelStream()
                 .map(dbPassword -> new DBPasswordData(dbPassword.getKey(), dbPassword.getUsername(), dbPassword.getPassword()))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    protected Class<WeakPasswordRule> getRuleType() {
+        return WeakPasswordRule.class;
     }
 
     @Override
