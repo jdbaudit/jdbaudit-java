@@ -96,14 +96,14 @@ public class AppTest {
 
         RiskScanner riskScanner = new RiskScanner();
 
-        try (FileInputStream inputStream = new FileInputStream("jdbaudit-rules/AUDIT.json")) {
+        try (FileInputStream inputStream = new FileInputStream("~\\projects\\jdbaudit-rules\\PRIVILEGE.json")) {
             String jsonRule = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
             riskScanner.loadRule(jsonRule, false);
         }
 
         DBSettings dbSettings = new MySQLSettings("localhost", 3306, "root", "root");
 
-        riskScanner.submitTask(ScanTask.of(dbSettings, RiskType.AUDIT, new ScanTaskHandler() {
+        riskScanner.submitTask(ScanTask.of(dbSettings, RiskType.PRIVILEGE, new ScanTaskHandler() {
 
             @Override
             public void onStart(ScanTask scanTask) {
