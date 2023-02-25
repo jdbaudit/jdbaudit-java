@@ -104,7 +104,7 @@ public class AuditScanner extends AbstractDBScanner<AuditRule, DBConfigData> {
     }
 
     @Override
-    protected List<DBConfigData> prepareData(DBSettings dbSettings, List<AuditRule> rules) {
+    protected Iterable<DBConfigData> prepareData(DBSettings dbSettings, List<AuditRule> rules) {
         List<String> queries = rules.parallelStream()
                 .filter(rule -> rule.getMatcher() != null)
                 .flatMap(rule -> rule.getMatcher().getConditions().stream()

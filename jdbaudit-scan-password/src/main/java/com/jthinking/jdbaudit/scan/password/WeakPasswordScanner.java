@@ -108,7 +108,7 @@ public class WeakPasswordScanner extends AbstractDBScanner<WeakPasswordRule, DBP
 
 
     @Override
-    protected List<DBPasswordData> prepareData(DBSettings dbSettings, List<WeakPasswordRule> rules) {
+    protected Iterable<DBPasswordData> prepareData(DBSettings dbSettings, List<WeakPasswordRule> rules) {
         return dbSettings.getPassword().parallelStream()
                 .map(dbPassword -> new DBPasswordData(dbPassword.getKey(), dbPassword.getUsername(), dbPassword.getPassword()))
                 .collect(Collectors.toList());

@@ -70,7 +70,7 @@ public abstract class AbstractDBScanner<R extends Rule, D extends DBData> implem
      * @param rules 全部规则信息
      * @return 待匹配的数据列表，对列表中的每个数据项进行规则匹配
      */
-    protected abstract List<D> prepareData(DBSettings dbSettings, List<R> rules);
+    protected abstract Iterable<D> prepareData(DBSettings dbSettings, List<R> rules);
 
     @Override
     public void configure(TaskConfig taskConfig) {
@@ -154,7 +154,7 @@ public abstract class AbstractDBScanner<R extends Rule, D extends DBData> implem
         }
         final List<R> filterRules = filterRules(this.rules.values(), scanTask);
         // 连接数据库准备数据，每个任务查询一次。
-        final List<D> preparedDataList = prepareData(scanTask.getDbSettings(), filterRules);
+        final Iterable<D> preparedDataList = prepareData(scanTask.getDbSettings(), filterRules);
         if (scanTask.getTimeout() == null) {
             scanTask.setTimeout(taskConfig.getTaskTimeout());
         }
