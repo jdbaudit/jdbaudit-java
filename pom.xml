@@ -20,6 +20,9 @@
         <module>jdbaudit-scan-password</module>
         <module>jdbaudit-scan-vulnerability</module>
         <module>jdbaudit-db-oracle</module>
+        <module>jdbaudit-scan-privacy</module>
+        <module>jdbaudit-scan-privilege</module>
+        <module>jdbaudit-scan-backdoor</module>
     </modules>
 
     <properties>
@@ -80,6 +83,21 @@
             <dependency>
                 <groupId>com.jthinking.jdbaudit</groupId>
                 <artifactId>jdbaudit-scan-password</artifactId>
+                <version>${jdbaudit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jthinking.jdbaudit</groupId>
+                <artifactId>jdbaudit-scan-backdoor</artifactId>
+                <version>${jdbaudit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jthinking.jdbaudit</groupId>
+                <artifactId>jdbaudit-scan-privacy</artifactId>
+                <version>${jdbaudit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jthinking.jdbaudit</groupId>
+                <artifactId>jdbaudit-scan-privilege</artifactId>
                 <version>${jdbaudit.version}</version>
             </dependency>
             <dependency>

@@ -35,6 +35,18 @@
             <artifactId>jdbaudit-scan-password</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jthinking.jdbaudit</groupId>
+            <artifactId>jdbaudit-scan-backdoor</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jthinking.jdbaudit</groupId>
+            <artifactId>jdbaudit-scan-privacy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jthinking.jdbaudit</groupId>
+            <artifactId>jdbaudit-scan-privilege</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
             <scope>test</scope>
