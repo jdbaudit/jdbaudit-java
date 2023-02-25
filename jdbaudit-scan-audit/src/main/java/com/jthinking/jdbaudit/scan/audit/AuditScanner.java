@@ -22,7 +22,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
-
 public class AuditScanner extends AbstractDBScanner<AuditRule, DBConfigData> {
 
     @Override
@@ -43,13 +42,14 @@ public class AuditScanner extends AbstractDBScanner<AuditRule, DBConfigData> {
 
             QueryResult result = dbConfigData.get(query);
             String error = result.getError();
+            int rowSize = result.getSize();
             Map<String, Integer> label = result.getLabel();
             List<String[]> rowDataList = result.getData();
 
             if (matchError != null) {
                 matched.put(id, error != null && error.contains(matchError));
             } else if (matchRowSize != null) {
-                matched.put(id, matchRowSize.equals(rowDataList.size()));
+                matched.put(id, matchRowSize.equals(rowSize));
             } else {
                 List<AuditConditionMatch> matches = condition.getMatchRows();
                 int count = 0;

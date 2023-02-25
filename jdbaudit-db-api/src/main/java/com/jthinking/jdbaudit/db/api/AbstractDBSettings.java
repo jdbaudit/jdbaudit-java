@@ -94,6 +94,7 @@ public abstract class AbstractDBSettings implements DBSettings {
 
                         queryResult.setQuery(query);
                         queryResult.setLabel(label);
+                        queryResult.setSize(rs.getFetchSize());
 
                         List<String[]> rowDataList = new ArrayList<>();
                         while (rs.next()) {
