@@ -44,7 +44,6 @@ public class MySQLSettings extends AbstractDBSettings {
      */
     private final String password;
 
-
     public MySQLSettings(String host, Integer port, String username, String password) {
         this.host = host;
         this.port = port;

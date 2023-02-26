@@ -20,6 +20,9 @@ public class DBVersion {
      */
     private List<Cpe> cpeList;
 
+    public DBVersion() {
+    }
+
     public DBVersion(String vendor, String product, String version, String update, List<Cpe> cpeList) {
         this.vendor = vendor;
         this.product = product;
