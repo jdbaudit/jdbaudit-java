@@ -24,6 +24,22 @@
         </dependency>
         <dependency>
             <groupId>com.jthinking.jdbaudit</groupId>
+            <artifactId>jdbaudit-db-oracle</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jthinking.jdbaudit</groupId>
+            <artifactId>jdbaudit-db-db2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jthinking.jdbaudit</groupId>
+            <artifactId>jdbaudit-db-mssql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jthinking.jdbaudit</groupId>
+            <artifactId>jdbaudit-db-postgres</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jthinking.jdbaudit</groupId>
             <artifactId>jdbaudit-scan-audit</artifactId>
         </dependency>
         <dependency>
